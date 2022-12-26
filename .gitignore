@@ -5,3 +5,7 @@ venv/
 .DS_Store
 *.pyc
 *.csv
+
+charts/
+assets/
+todo.md

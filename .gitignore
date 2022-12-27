@@ -7,5 +7,6 @@ venv/
 *.csv
 
 charts/
-assets/
 todo.md
+
+dashboard.py

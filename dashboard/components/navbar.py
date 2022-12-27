@@ -9,10 +9,10 @@ def Navbar():
     layout = html.Div([
         dbc.NavbarSimple(
             children=[
-                dbc.NavItem(dbc.NavLink("Home", href="/home")),
-                dbc.NavItem(dbc.NavLink("Exports", href="/page1")),
+                dbc.NavItem(dbc.NavLink("Breakdown", href="/home")),
+                dbc.NavItem(dbc.NavLink("Evolution", href="/page1")),
             ],
-            brand="Global Trade Dashboard",
+            # brand="Global Trade Dashboard",
             color="dark",
             dark=True,
         ),

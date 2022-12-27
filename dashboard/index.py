@@ -5,7 +5,7 @@ from dash.dependencies import Input, Output
 from app import app
 
 # App pages
-from pages import home, page1 #, page2
+from pages import home, page1#, page2
 
 # The navbar
 from components import navbar
@@ -32,4 +32,4 @@ def display_page(pathname):
 
 # Run the app on localhost:8050
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server( port=8050)

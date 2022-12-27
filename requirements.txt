@@ -1,4 +1,6 @@
+dash==2.7.1
 dash_bootstrap_components==1.2.1
-dash_html_components==2.0.0
-pandas==1.4.3
+dash_design_kit==1.6.8
+numpy==1.24.0
+pandas==1.5.2
 plotly==5.11.0

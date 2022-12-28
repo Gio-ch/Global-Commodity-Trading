@@ -1,5 +1,4 @@
 
-# import plotly.graph_objs as go
 import dash_design_kit as ddk
 import dash
 from dash.dependencies import Input, Output, State

@@ -211,7 +211,7 @@ def update_output(selected_years, chart_type):
                                 'column_id': start_year,
                             },
                             'color': 'lightgrey',
-                            'textDecoration': 'underline',
+                            # 'textDecoration': 'underline',
                             'onhover': 'tooltip'
                         },
                         {
@@ -220,7 +220,7 @@ def update_output(selected_years, chart_type):
                                 'column_id': end_year,
                             },
                             'color': 'lightgrey',
-                            'textDecoration': 'underline',
+                            # 'textDecoration': 'underline',
                             'onhover': 'tooltip'
                         }
                     ],

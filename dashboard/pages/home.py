@@ -44,11 +44,9 @@ layout = ddk.App(
                     dbc.Card(
                         dbc.CardBody(
                             children=[
-                                # Input1: 'country'
                                 html.Label('Area', style={
                                     'fontSize': 30, 'textAlign': 'center'}),
                                 dcc.Dropdown(
-                                    # id='period',
                                     id='country',
                                     options=[
                                         {"label": i, "value": i} for i in all_countries
@@ -146,7 +144,8 @@ def update_graphs(selected_country,selected_year, chart_type, selected_type):
         else:
             # Total
             flow_breakdown = country_df.groupby(['country_or_area', 'flow'])['trade_usd'].sum().reset_index()
-            fig_flow = px.bar(flow_breakdown, x='flow', y='trade_usd', color='flow', title=None,labels={'x': 'Flow Type', 'y': 'Total Trade (USD)'})
+            fig_flow = px.bar(flow_breakdown, x='flow', y='trade_usd', color='flow', title=None,)
+            fig_flow.update_layout(xaxis_title='Flow Type', yaxis_title='Total Trade (USD)', legend_title='Flow Type',)
             
             
         # Top 10 Commodities for selected country (and year) (Charts 2 & 3)

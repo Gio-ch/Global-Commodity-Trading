@@ -1,44 +1,43 @@
 import dash_design_kit as ddk
-import pandas as pd
+# import pandas as pd
 import dash
 from dash import Dash, html, dash_table, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
-import numpy as np
 from app import app
 from pages.home import df
+from pages.page1 import get_top_countries_usd,find_earliest_year_with_value,find_latest_year_with_value,START_YEAR,END_YEAR
 
-
-def get_top_countries_usd(df, top=15):
-    top_10_import_countries = df.groupby(['country_or_area'])[['trade_usd']].sum(
-    ).sort_values(by=['trade_usd'], ascending=False)[:top].index
-    df_import_top = df[df['country_or_area'].isin(top_10_import_countries)]
-    return df_import_top
-def find_earliest_year_with_value(row, start_year, end_year):
-    for i in range(start_year, end_year+1):
-        try:
-            if not np.isnan(row[i]):
-                return i
-        except:
-            pass
-    return np.nan
-def find_latest_year_with_value(row, start_year, end_year):
-    for i in range(end_year, start_year-1, -1):
-        try:
-            if not np.isnan(row[i]):
-                return i
-        except:
-            pass
-    return np.nan
+# def get_top_countries_usd(df, top=15):
+#     top_10_import_countries = df.groupby(['country_or_area'])[['trade_usd']].sum(
+#     ).sort_values(by=['trade_usd'], ascending=False)[:top].index
+#     df_import_top = df[df['country_or_area'].isin(top_10_import_countries)]
+#     return df_import_top
+# def find_earliest_year_with_value(row, start_year, end_year):
+#     for i in range(start_year, end_year+1):
+#         try:
+#             if not np.isnan(row[i]):
+#                 return i
+#         except:
+#             pass
+#     return np.nan
+# def find_latest_year_with_value(row, start_year, end_year):
+    # for i in range(end_year, start_year-1, -1):
+    #     try:
+    #         if not np.isnan(row[i]):
+    #             return i
+    #     except:
+    #         pass
+    # return np.nan
 # def total_usd_by_year_country(df,):
 #     return df.groupby(['year','country_or_area'],as_index=False)[['trade_usd']].sum()
 
 
 dash.register_page(__name__, path='/')
 
-START_YEAR = int(df['year'].min())
-END_YEAR = int(df['year'].max())
+# START_YEAR = int(df['year'].min())
+# END_YEAR = int(df['year'].max())
 
 # Main layout
 layout = ddk.App(
@@ -91,21 +90,20 @@ layout = ddk.App(
                     dbc.Card(
                         dbc.CardBody(
                             children=[
-                                
-                                # html.Label('Exports of goods and services', style={
                                 html.Div(
                                     [
-                                    html.H3('Value of exported of goods and services',id='page-title'),
+                                    html.H3('Value of imported of goods and services',id='page-title'),
                                     #'textAlign': 'center'}, id='page-title'),
                                     # 'fontSize': 30, 'textAlign': 'center'}, ),
-                                    html.Small(  'Data are not in constant U.S. dollars. This means values are not corrected for inflation.\
-                                        The data is based on the 2017 revision of the United Nations Commodity Trade Statistics Database (UN COMTRADE).',)
+                                    html.Small(  'Imports of goods and services represent the value of all goods and other market services received from the rest of the world.\
+                                                  Data are not in constant U.S. dollars. This means values are not corrected for inflation.\
+                                                  The data is based on the 2017 revision of the United Nations Commodity Trade Statistics Database (UN COMTRADE).',)
                                     ],
                                     style={'textAlign': 'left', 'width': '80%'},
                                 ),
 
-                                html.Div(id="update-table"),
-                                html.Div(id="slider-container", children=[
+                                html.Div(id="update-table2"),
+                                html.Div(id="slider-container2", children=[
                                     dcc.RangeSlider(
                                         id="year-slider",
                                         step=1,
@@ -130,7 +128,7 @@ layout = ddk.App(
 
 ########
 @app.callback(
-    Output('slider-container', 'hidden'),
+    Output('slider-container2', 'hidden'),
     [Input('radio-chart-table', 'value')],
 )
 def set_year_options(selected_chart):
@@ -143,7 +141,7 @@ def set_year_options(selected_chart):
 
 
 @app.callback(
-    Output("update-table", "children"),
+    Output("update-table2", "children"),
     [Input("year-slider", "value"),
      Input("radio-chart-table", "value")
      ],
@@ -154,27 +152,27 @@ def update_output(selected_years, chart_type):
 
     # select data in range
     selected_range = list(range(int(start_year), int(end_year)+1))
-    dff_export = df[df['year'].isin(selected_range)]
-    dff_export = df[ (df['flow'] == 'Export') | (df['flow'] == 'Re-Export')]
+    dff_import = df[df['year'].isin(selected_range)]
+    dff_import = df[ (df['flow'] == 'Import') | (df['flow'] == 'Re-Import')]
     # absolute_change_table = absolute_change_table[['country_or_area',start_year,end_year,'change','earliest_year_available']]
 
     graph = 1
     if chart_type == 'Table':
         # Table: (Chart 1)
-        global_export_pivot = dff_export.pivot_table(
+        global_import_pivot = dff_import.pivot_table(
             index='country_or_area', columns='year', values='trade_usd', aggfunc='sum').reset_index()
-        earliest_year_available = global_export_pivot.apply(
+        earliest_year_available = global_import_pivot.apply(
             lambda x: find_earliest_year_with_value(x, START_YEAR, END_YEAR), axis=1)
-        latest_year_available = global_export_pivot.apply(
+        latest_year_available = global_import_pivot.apply(
             lambda x: find_latest_year_with_value(x, START_YEAR, END_YEAR), axis=1)
-        global_export_pivot.columns = global_export_pivot.columns.astype(str)
+        global_import_pivot.columns = global_import_pivot.columns.astype(str)
         # Now we can fill the missing values with the closest available year (from the right)
-        global_export_pivot = global_export_pivot.fillna(
+        global_import_pivot = global_import_pivot.fillna(
             method='bfill', axis=1)
         # Fill the missing values with the closest available year (from the left)
-        global_export_pivot = global_export_pivot.fillna(
+        global_import_pivot = global_import_pivot.fillna(
             method='ffill', axis=1)
-        absolute_change_table = global_export_pivot[[
+        absolute_change_table = global_import_pivot[[
             'country_or_area', start_year, end_year]]
         absolute_change_table['Absolute Change'] = absolute_change_table[end_year] - \
             absolute_change_table[start_year]
@@ -236,7 +234,7 @@ def update_output(selected_years, chart_type):
             ])
     elif chart_type == 'Line':
         # Chart 2
-        df_flow = dff_export
+        df_flow = dff_import
         # Select top 10 countries (by import) for line chart
         df_flow_top = get_top_countries_usd(df_flow, top=15)
         top_10_flow_table = df_flow_top.groupby(
@@ -244,7 +242,7 @@ def update_output(selected_years, chart_type):
         top_10_flow_table.sort_values(by=['year'], inplace=True)
         top_10_flow_table.reset_index(inplace=True)
         top_10_flow_chart = px.line(top_10_flow_table, x='year', y='trade_usd', color='country_or_area',
-                                    title=None, labels={'trade_usd': 'Value of Exported goods in USD', 'year': 'Year', 'country_or_area': 'Top 15 Areas'}, height=550)
+                                    title=None, labels={'trade_usd': 'Value of Imported goods in USD', 'year': 'Year', 'country_or_area': 'Top 15 Areas'}, height=550)
 
         graph = html.Div([
             dcc.Graph(
@@ -254,11 +252,11 @@ def update_output(selected_years, chart_type):
         ])
     else:
         # Choropleth (Chart 3)
-        global_export_table = dff_export.groupby(['year', 'country_or_area'], as_index=False)[
+        global_import_table = dff_import.groupby(['year', 'country_or_area'], as_index=False)[
             ['trade_usd']].sum()
-        choropleth_fig = px.choropleth(global_export_table, locations="country_or_area", color="trade_usd", hover_name="country_or_area",
+        choropleth_fig = px.choropleth(global_import_table, locations="country_or_area", color="trade_usd", hover_name="country_or_area",
                                        animation_frame="year", color_continuous_scale=px.colors.sequential.Reds, locationmode='country names',
-                                       scope='world', title=None, labels={'trade_usd': 'Value of Exported goods in USD', 'year': 'Year'},
+                                       scope='world', title=None, labels={'trade_usd': 'Value of Imported goods in USD', 'year': 'Year'},
                                        range_color=[0, 50000000000], height=550)
         graph = html.Div([
             dcc.Graph(

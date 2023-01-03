@@ -4,10 +4,10 @@
 venv/
 .DS_Store
 *.pyc
-*.csv
+# *.csv
 
 charts/
 todo.md
 
 dashboard.py
-data/
+# data/

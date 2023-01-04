@@ -1,3 +1,4 @@
+# Description: Adjust the trade_usd column for inflation: to be run once before the app is deployed
 import cpi
 import pandas as pd
 cpi.update()

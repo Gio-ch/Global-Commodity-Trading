@@ -123,11 +123,6 @@ layout = ddk.App(
     ]
 ),
 
-# @app.callback(
-#     [Output]
-# )
-# def set_datacard_value():
-#     return 2   
 @app.callback(
     [Output('year', 'min'),
     Output('year', 'max'),],

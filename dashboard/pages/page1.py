@@ -9,7 +9,6 @@ import numpy as np
 from app import app
 from pages.home import df
 
-
 def get_top_countries_usd(df, top=15):
     top_10_import_countries = df.groupby(['country_or_area'])[['trade_usd']].sum(
     ).sort_values(by=['trade_usd'], ascending=False)[:top].index
@@ -39,6 +38,8 @@ dash.register_page(__name__, path='/')
 
 START_YEAR = int(df['year'].min())
 END_YEAR = int(df['year'].max())
+
+df_export = df[ (df['flow'] == 'Export') | (df['flow'] == 'Re-Export')]
 
 # Main layout
 layout = ddk.App(
@@ -95,11 +96,10 @@ layout = ddk.App(
                                 # html.Label('Exports of goods and services', style={
                                 html.Div(
                                     [
-                                    html.H3('Value of exported of goods and services',id='page-title'),
-                                    #'textAlign': 'center'}, id='page-title'),
-                                    # 'fontSize': 30, 'textAlign': 'center'}, ),
-                                    html.Small(  'Data are not in constant U.S. dollars. This means values are not corrected for inflation.\
-                                        The data is based on the 2017 revision of the United Nations Commodity Trade Statistics Database (UN COMTRADE).',)
+                                    html.H3('Value of exported of goods and services',id='page-title'),                                    
+                                    html.Small( 'Data is adjusted for inflation and shown in constant U.S. dollars.\
+                                                 The data is based on the 2017 revision of the United Nations Commo\
+                                                 dity Trade Statistics Database (UN COMTRADE).',)
                                     ],
                                     style={'textAlign': 'left', 'width': '80%'},
                                 ),
@@ -154,8 +154,7 @@ def update_output(selected_years, chart_type):
 
     # select data in range
     selected_range = list(range(int(start_year), int(end_year)+1))
-    dff_export = df[df['year'].isin(selected_range)]
-    dff_export = df[ (df['flow'] == 'Export') | (df['flow'] == 'Re-Export')]
+    dff_export = df_export[df_export['year'].isin(selected_range)]
     # absolute_change_table = absolute_change_table[['country_or_area',start_year,end_year,'change','earliest_year_available']]
 
     graph = 1
@@ -184,6 +183,16 @@ def update_output(selected_years, chart_type):
             by=['Absolute Change'], ascending=False)
         absolute_change_table = absolute_change_table.rename(
             columns={'country_or_area': 'Country'})
+        # Display values in human readable form comma separated and rounded to integer
+        absolute_change_table[start_year] = absolute_change_table[start_year].apply(
+            lambda x: "${:,}".format(round(x)))
+        absolute_change_table[end_year] = absolute_change_table[end_year].apply(
+            lambda x: "${:,}".format(round(x)))
+        absolute_change_table['Absolute Change'] = absolute_change_table['Absolute Change'].apply(
+            lambda x: "${:,}".format(round(x)))
+        # absolute_change_table[start_year] = absolute_change_table[start_year].apply(  lambda x: numerize.numerize(x,) )
+        # absolute_change_table[end_year] = absolute_change_table[end_year].apply(  lambda x: numerize.numerize(x,) )
+        
         graph = html.Div(
             [
                 dash_table.DataTable(
@@ -206,16 +215,21 @@ def update_output(selected_years, chart_type):
                     
                     tooltip_data=[
                         {
-                            f'{start_year}': {'value': f'Showing closest available data point {row["earliest_year_available"]}', 'type': 'markdown',
+                            # show tooltip if the value is not the same as the value in the earliest_year_available(latest_year_available) column
+                            f'{start_year}': {'value': f'Showing closest available data point {row["earliest_year_available"]}'
+                                              if str(row["earliest_year_available"]) != start_year else '',
+                                              'type': 'markdown',
                                               },
-                            f'{end_year}': {'value': f'Showing closest available data point {row["latest_year_available"]}', 'type': 'markdown', },
+                            f'{end_year}': {'value': f'Showing closest available data point {row["latest_year_available"]}'
+                                            if str(row["latest_year_available"]) != end_year else '', 
+                                            'type': 'markdown',
+                                            },
                         } for row in absolute_change_table.to_dict('records') 
                     ],
                     style_cell_conditional=[
                         {
                             'if': {
                                 'filter_query': '{{earliest_year_available}} > {}'.format((start_year)),
-                                # 'filter_query': '{earliest_year_available} > {}'.format((start_year)),
                                 'column_id': start_year,
                             },
                             'color': 'lightgrey',
@@ -228,8 +242,7 @@ def update_output(selected_years, chart_type):
                                 'column_id': end_year,
                             },
                             'color': 'lightgrey',
-                            # 'textDecoration': 'underline',
-                            'onhover': 'tooltip'
+                            'onhover': 'tooltip',
                         }
                     ],
                 ),
@@ -237,7 +250,7 @@ def update_output(selected_years, chart_type):
     elif chart_type == 'Line':
         # Chart 2
         df_flow = dff_export
-        # Select top 10 countries (by import) for line chart
+        # Select top 10 countries (by import or exprot) for line chart
         df_flow_top = get_top_countries_usd(df_flow, top=15)
         top_10_flow_table = df_flow_top.groupby(
             ['year', 'country_or_area'], as_index=False)[['trade_usd']].sum()
@@ -245,6 +258,7 @@ def update_output(selected_years, chart_type):
         top_10_flow_table.reset_index(inplace=True)
         top_10_flow_chart = px.line(top_10_flow_table, x='year', y='trade_usd', color='country_or_area',
                                     title=None, labels={'trade_usd': 'Value of Exported goods in USD', 'year': 'Year', 'country_or_area': 'Top 15 Areas'}, height=550)
+        top_10_flow_chart.update_yaxes( tickprefix="$")
 
         graph = html.Div([
             dcc.Graph(
@@ -259,7 +273,7 @@ def update_output(selected_years, chart_type):
         choropleth_fig = px.choropleth(global_export_table, locations="country_or_area", color="trade_usd", hover_name="country_or_area",
                                        animation_frame="year", color_continuous_scale=px.colors.sequential.Reds, locationmode='country names',
                                        scope='world', title=None, labels={'trade_usd': 'Value of Exported goods in USD', 'year': 'Year'},
-                                       range_color=[0, 50000000000], height=550)
+                                       range_color=[0, 100000000000], height=550)
         graph = html.Div([
             dcc.Graph(
                 id='choropleth_chart',

@@ -1,5 +1,6 @@
 import dash_design_kit as ddk
 # import pandas as pd
+from numerize import numerize
 import dash
 from dash import Dash, html, dash_table, dcc
 from dash.dependencies import Input, Output, State
@@ -9,35 +10,9 @@ from app import app
 from pages.home import df
 from pages.page1 import get_top_countries_usd,find_earliest_year_with_value,find_latest_year_with_value,START_YEAR,END_YEAR
 
-# def get_top_countries_usd(df, top=15):
-#     top_10_import_countries = df.groupby(['country_or_area'])[['trade_usd']].sum(
-#     ).sort_values(by=['trade_usd'], ascending=False)[:top].index
-#     df_import_top = df[df['country_or_area'].isin(top_10_import_countries)]
-#     return df_import_top
-# def find_earliest_year_with_value(row, start_year, end_year):
-#     for i in range(start_year, end_year+1):
-#         try:
-#             if not np.isnan(row[i]):
-#                 return i
-#         except:
-#             pass
-#     return np.nan
-# def find_latest_year_with_value(row, start_year, end_year):
-    # for i in range(end_year, start_year-1, -1):
-    #     try:
-    #         if not np.isnan(row[i]):
-    #             return i
-    #     except:
-    #         pass
-    # return np.nan
-# def total_usd_by_year_country(df,):
-#     return df.groupby(['year','country_or_area'],as_index=False)[['trade_usd']].sum()
-
-
 dash.register_page(__name__, path='/')
 
-# START_YEAR = int(df['year'].min())
-# END_YEAR = int(df['year'].max())
+df_import = df[ (df['flow'] == 'Import') | (df['flow'] == 'Re-Import')]
 
 # Main layout
 layout = ddk.App(
@@ -96,7 +71,7 @@ layout = ddk.App(
                                     #'textAlign': 'center'}, id='page-title'),
                                     # 'fontSize': 30, 'textAlign': 'center'}, ),
                                     html.Small(  'Imports of goods and services represent the value of all goods and other market services received from the rest of the world.\
-                                                  Data are not in constant U.S. dollars. This means values are not corrected for inflation.\
+                                                  Data is adjusted for inflation and shown in constant U.S. dollars.\
                                                   The data is based on the 2017 revision of the United Nations Commodity Trade Statistics Database (UN COMTRADE).',)
                                     ],
                                     style={'textAlign': 'left', 'width': '80%'},
@@ -135,10 +110,6 @@ def set_year_options(selected_chart):
     if selected_chart == 'Choropleth':
         return True
     return False
-#########
-
-##########
-
 
 @app.callback(
     Output("update-table2", "children"),
@@ -152,8 +123,7 @@ def update_output(selected_years, chart_type):
 
     # select data in range
     selected_range = list(range(int(start_year), int(end_year)+1))
-    dff_import = df[df['year'].isin(selected_range)]
-    dff_import = df[ (df['flow'] == 'Import') | (df['flow'] == 'Re-Import')]
+    dff_import = df_import[df_import['year'].isin(selected_range)]
     # absolute_change_table = absolute_change_table[['country_or_area',start_year,end_year,'change','earliest_year_available']]
 
     graph = 1
@@ -182,6 +152,14 @@ def update_output(selected_years, chart_type):
             by=['Absolute Change'], ascending=False)
         absolute_change_table = absolute_change_table.rename(
             columns={'country_or_area': 'Country'})
+        # Format the table
+        absolute_change_table[start_year] = absolute_change_table[start_year].apply(
+            lambda x: "${:,}".format(round(x)))
+        absolute_change_table[end_year] = absolute_change_table[end_year].apply(
+            lambda x: "${:,}".format(round(x)))
+        absolute_change_table['Absolute Change'] = absolute_change_table['Absolute Change'].apply(
+            lambda x: "${:,}".format(round(x)))
+        
         graph = html.Div(
             [
                 dash_table.DataTable(
@@ -201,23 +179,26 @@ def update_output(selected_years, chart_type):
                     hidden_columns=['earliest_year_available',
                                     'latest_year_available'],
                     # Hover info
-                    
                     tooltip_data=[
                         {
-                            f'{start_year}': {'value': f'Showing closest available data point {row["earliest_year_available"]}', 'type': 'markdown',
+                            # show tooltip if the value is not the same as the value in the earliest_year_available(latest_year_available) column
+                            f'{start_year}': {'value': f'Showing closest available data point {row["earliest_year_available"]}'
+                                              if str(row["earliest_year_available"]) != start_year else '',
+                                              'type': 'markdown',
                                               },
-                            f'{end_year}': {'value': f'Showing closest available data point {row["latest_year_available"]}', 'type': 'markdown', },
+                            f'{end_year}': {'value': f'Showing closest available data point {row["latest_year_available"]}'
+                                            if str(row["latest_year_available"]) != end_year else '', 
+                                            'type': 'markdown',
+                                            },
                         } for row in absolute_change_table.to_dict('records') 
                     ],
                     style_cell_conditional=[
                         {
                             'if': {
                                 'filter_query': '{{earliest_year_available}} > {}'.format((start_year)),
-                                # 'filter_query': '{earliest_year_available} > {}'.format((start_year)),
                                 'column_id': start_year,
                             },
                             'color': 'lightgrey',
-                            # 'textDecoration': 'underline',
                             'onhover': 'tooltip'
                         },
                         {
@@ -243,6 +224,7 @@ def update_output(selected_years, chart_type):
         top_10_flow_table.reset_index(inplace=True)
         top_10_flow_chart = px.line(top_10_flow_table, x='year', y='trade_usd', color='country_or_area',
                                     title=None, labels={'trade_usd': 'Value of Imported goods in USD', 'year': 'Year', 'country_or_area': 'Top 15 Areas'}, height=550)
+        top_10_flow_chart.update_yaxes( tickprefix="$")
 
         graph = html.Div([
             dcc.Graph(
@@ -257,7 +239,7 @@ def update_output(selected_years, chart_type):
         choropleth_fig = px.choropleth(global_import_table, locations="country_or_area", color="trade_usd", hover_name="country_or_area",
                                        animation_frame="year", color_continuous_scale=px.colors.sequential.Reds, locationmode='country names',
                                        scope='world', title=None, labels={'trade_usd': 'Value of Imported goods in USD', 'year': 'Year'},
-                                       range_color=[0, 50000000000], height=550)
+                                       range_color=[0, 500000000000], height=550)
         graph = html.Div([
             dcc.Graph(
                 id='choropleth_chart',

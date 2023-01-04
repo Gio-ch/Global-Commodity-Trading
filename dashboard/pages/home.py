@@ -1,4 +1,3 @@
-
 import dash_design_kit as ddk
 import dash
 from dash.dependencies import Input, Output, State
@@ -11,16 +10,27 @@ import numpy as np
 import pandas as pd
 from app import app
 import time
+from numerize import numerize
+
 
 dash.register_page(__name__, path='/')
 
-# Define the data types to use less memory and speed up the app
+# def inflate_col(data, col='trade_usd'):
+#     """
+#     Adjust a column for inflation
+#     """
+#     return data.apply(lambda x: cpi.inflate(x[col],
+#                       x.year), axis=1) 
 def convert(val):
+    """
+    Define the data types to use less memory and speed up the app
+    """
     if val == np.nan:
         return 0
     return val 
 start_t = time.time()
-df = pd.read_csv("data/commodity_trade_statistics_data.csv",low_memory=False, 
+# df = pd.read_csv("data/commodity_trade_statistics_data.csv",low_memory=False, 
+df = pd.read_csv("data/commodity_trade_statistics_data_adjusted.csv",low_memory=False, 
                  usecols=['country_or_area', 'year', 'commodity', 'flow', 'trade_usd', 'weight_kg'],
                  dtype={'trade_usd': np.float64, 'weight_kg': np.float64, 'year': np.int32, 'country_or_area': str, 'commodity': str, 'flow': str},nrows=1000000)
 #converters={'trade_usd': convert, 'weight_kg': convert},
@@ -79,12 +89,10 @@ layout = ddk.App(
                                 ddk.DataCard(value=None, label='Total traded', id='display-total',
                                              style={'width':'fit-content',# fit the number inside the card
                                                     'fontSize': #inherit
-                                                    '0.8em',# align horizontally
-                                                    
+                                                    '0.85vw',# align horizontally
                                                     }),
-                                # ddk.CardHeader(title='Total weight across the selected years'),
-                                # ddk.DataCard(value=None, label='Total weight', id='total_weight'),                                
-                        ]
+                        ],
+                        # style={ 'margin': 'auto'},
                 ),
                 ddk.Card(
                     # width=56,
@@ -93,7 +101,7 @@ layout = ddk.App(
                         ddk.CardHeader(
                             title=f'Import Export Breakdown'),
                         dcc.RadioItems(
-                            ['Evolution', 'Total'], value='Evolution', id='display-type', labelStyle={'display': 'inline-block', }),
+                            ['Evolution', 'All Years'], value='Evolution', id='display-type', labelStyle={'display': 'inline-block', }),
                         dcc.Graph(id='display-flow', figure={}),
 
                     ],
@@ -162,13 +170,15 @@ def update_graphs(selected_country,selected_year, chart_type, selected_type):
         # Export & Import comparison (Chart 1&2)
         if selected_type == 'Evolution':
             flow_breakdown = country_df.groupby(['country_or_area', 'year','flow'])['trade_usd'].sum().reset_index()
-            fig_flow = px.line(flow_breakdown, x="year", y="trade_usd", color='flow',  hover_name="country_or_area",  render_mode="svg")
+            fig_flow = px.line(flow_breakdown, x="year", y="trade_usd", color='flow',  hover_name="country_or_area",  render_mode="svg",)
             fig_flow.update_layout(legend_title='Flow Type',yaxis_title='Total Trade (USD)', xaxis_title='Year', )
+            # add dollar sign to y axis
         else:
             # Total
             flow_breakdown = country_df.groupby(['country_or_area', 'flow'])['trade_usd'].sum().reset_index()
             fig_flow = px.bar(flow_breakdown, x='flow', y='trade_usd', color='flow', title=None,)
             fig_flow.update_layout(xaxis_title='Flow Type', yaxis_title='Total Trade (USD)', legend_title='Flow Type',)
+        fig_flow.update_yaxes(tickprefix="$", )
         total_traded = flow_breakdown.trade_usd.sum()
             
         # Top 10 Commodities for selected country (and year) (Charts 2 & 3)
@@ -185,7 +195,9 @@ def update_graphs(selected_country,selected_year, chart_type, selected_type):
             fig_commodities = px.bar(
                 top_commodities, x=list(top_commodities.index), y=top_commodities.values, color=top_commodities.index, title=None,labels=None)
             fig_commodities.update_layout(xaxis_title=None, yaxis_title='Frequency',legend_title='Commodities' )
-    format_total = '{:,.0f}'.format(total_traded) + '$'# ' USD'
+    format_total = '${:,.0f}'.format(round(total_traded, 1))# ' USD'
+    
+    # format_total = numerize.numerize(total_traded,) + '$'
     return [fig_flow,fig_commodities,format_total]
 
 if __name__ == "__main__":

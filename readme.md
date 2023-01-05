@@ -1,5 +1,5 @@
 # Global Commodity Trading statistics Dashboard
-
+![](https://github.com/Gio-ch/Global-Commodity-Trading/blob/dev/assets/demo.gif)
 ## Instructions for running: Macos
 
 ```
